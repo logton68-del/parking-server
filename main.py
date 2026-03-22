@@ -4,6 +4,15 @@ app = FastAPI()
 
 protected_numbers = set()
 alerts = []
+tokens = set()
+
+@app.get("/save_token")
+def save_token(token: str):
+    tokens.add(token)
+    return {
+        "status": "saved",
+        "tokens_count": len(tokens)
+    }
 
 @app.get("/")
 def root():
