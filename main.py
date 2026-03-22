@@ -23,10 +23,10 @@ tokens = set()
 def send_push_notification(token, title, body):
     try:
         message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body,
-            ),
+            data={
+                "title": title,
+                "body": body
+            },
             token=token,
         )
 
