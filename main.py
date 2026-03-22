@@ -2,6 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 import os
 import json
+from fastapi import FastAPI
 
 firebase_key_str = os.getenv("FIREBASE_KEY")
 
@@ -13,13 +14,34 @@ firebase_key = json.loads(firebase_key_str)
 cred = credentials.Certificate(firebase_key)
 firebase_admin.initialize_app(cred)
 
-from fastapi import FastAPI
-
 app = FastAPI()
 
 protected_numbers = set()
 alerts = []
 tokens = set()
+
+def send_push_notification(token, title, body):
+    message = messaging.Message(
+        notification=messaging.Notification(
+            title=title,
+            body=body,
+        ),
+        token=token,
+    )
+
+    response = messaging.send(message)
+    print("Push sent:", response)
+
+@app.get("/send_test")
+def send_test():
+    for token in tokens:
+        send_push_notification(
+            token,
+            "🚨 Внимание",
+            "Вашу машину могут эвакуировать!"
+        )
+
+    return {"status": "sent"}
 
 @app.get("/save_token")
 def save_token(token: str):
