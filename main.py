@@ -21,16 +21,20 @@ alerts = []
 tokens = set()
 
 def send_push_notification(token, title, body):
-    message = messaging.Message(
-        notification=messaging.Notification(
-            title=title,
-            body=body,
-        ),
-        token=token,
-    )
+    try:
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            token=token,
+        )
 
-    response = messaging.send(message)
-    print("Push sent:", response)
+        response = messaging.send(message)
+        print("Push sent:", response)
+
+    except Exception as e:
+        print("ERROR SENDING PUSH:", str(e))
 
 @app.get("/send_test")
 def send_test():
