@@ -1,3 +1,18 @@
+import firebase_admin
+from firebase_admin import credentials, messaging
+import os
+import json
+
+firebase_key_str = os.getenv("FIREBASE_KEY")
+
+if not firebase_key_str:
+    raise ValueError("FIREBASE_KEY not found")
+
+firebase_key = json.loads(firebase_key_str)
+
+cred = credentials.Certificate(firebase_key)
+firebase_admin.initialize_app(cred)
+
 from fastapi import FastAPI
 
 app = FastAPI()
