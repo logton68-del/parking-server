@@ -4,6 +4,7 @@ import os
 import json
 from fastapi import FastAPI
 
+# === FIREBASE INIT ===
 firebase_key_str = os.getenv("FIREBASE_KEY")
 
 if not firebase_key_str:
@@ -14,12 +15,14 @@ firebase_key = json.loads(firebase_key_str)
 cred = credentials.Certificate(firebase_key)
 firebase_admin.initialize_app(cred)
 
+# === APP ===
 app = FastAPI()
 
-protected_numbers = set()
+# теперь: номер -> токен
+protected_numbers = {}
 alerts = []
-tokens = set()
 
+# === PUSH ===
 def send_push_notification(token, title, body):
     try:
         message = messaging.Message(
@@ -36,9 +39,11 @@ def send_push_notification(token, title, body):
     except Exception as e:
         print("ERROR SENDING PUSH:", str(e))
 
+
+# === TEST PUSH ===
 @app.get("/send_test")
 def send_test():
-    for token in tokens:
+    for token in protected_numbers.values():
         send_push_notification(
             token,
             "🚨 Внимание",
@@ -47,31 +52,33 @@ def send_test():
 
     return {"status": "sent"}
 
-@app.get("/save_token")
-def save_token(token: str):
-    tokens.add(token)
-    return {
-        "status": "saved",
-        "tokens_count": len(tokens)
-    }
 
+# === ROOT ===
 @app.get("/")
 def root():
     return {"message": "Server is working 🚀"}
 
+
+# === PROTECT ===
 @app.get("/protect")
-def protect_plate(number: str):
+def protect_plate(number: str, token: str):
     number = number.upper()
-    protected_numbers.add(number)
+
+    # сохраняем номер -> токен
+    protected_numbers[number] = token
+
     return {
         "status": "protected_enabled",
         "number": number
     }
 
+
+# === UNPROTECT ===
 @app.get("/unprotect")
 def unprotect_plate(number: str):
     number = number.upper()
-    protected_numbers.discard(number)
+
+    protected_numbers.pop(number, None)
 
     global alerts
     alerts = [a for a in alerts if a.get("number") != number]
@@ -81,6 +88,8 @@ def unprotect_plate(number: str):
         "number": number
     }
 
+
+# === CHECK ===
 @app.get("/check")
 def check_plate(number: str):
     number = number.upper()
@@ -94,6 +103,15 @@ def check_plate(number: str):
                 "status": "alert"
             })
 
+        token = protected_numbers[number]
+
+        # 🔥 отправляем push сразу владельцу
+        send_push_notification(
+            token,
+            "🚨 Внимание",
+            f"Вашу машину ({number}) могут эвакуировать!"
+        )
+
         return {
             "status": "protected",
             "number": number,
@@ -105,10 +123,14 @@ def check_plate(number: str):
         "number": number
     }
 
+
+# === ALERTS ===
 @app.get("/alerts")
 def get_alerts():
     return alerts
 
+
+# === CLEAR ALERT ===
 @app.get("/clear")
 def clear_alert(number: str):
     number = number.upper()
@@ -121,6 +143,8 @@ def clear_alert(number: str):
         "number": number
     }
 
+
+# === DEBUG: список защищённых ===
 @app.get("/protected")
 def get_protected():
-    return list(protected_numbers)
+    return protected_numbers
