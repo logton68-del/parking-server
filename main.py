@@ -147,4 +147,6 @@ def clear_alert(number: str):
 # === DEBUG: список защищённых ===
 @app.get("/protected")
 def get_protected():
-    return protected_numbers
+    return {
+        "protected_numbers": list(protected_numbers.keys())
+    }
