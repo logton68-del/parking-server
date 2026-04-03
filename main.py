@@ -3,6 +3,7 @@ from firebase_admin import credentials, messaging
 import os
 import json
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
 # === FIREBASE INIT ===
 firebase_key_str = os.getenv("FIREBASE_KEY")
@@ -150,3 +151,143 @@ def get_protected():
     return {
         "protected_numbers": list(protected_numbers.keys())
     }
+
+# === MINI SITE ===
+@app.get("/report/{number}", response_class=HTMLResponse)
+def report_page(number: str):
+    number = number.upper()
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ParkingShield</title>
+        <style>
+            body {{
+                margin: 0;
+                padding: 0;
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: linear-gradient(180deg, #0B1220 0%, #111827 100%);
+                font-family: Arial, sans-serif;
+                color: white;
+            }}
+
+            .card {{
+                width: 90%;
+                max-width: 420px;
+                background: #1E293B;
+                border-radius: 20px;
+                padding: 28px;
+                box-sizing: border-box;
+                text-align: center;
+                box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+                border: 1px solid rgba(255,255,255,0.08);
+            }}
+
+            .logo {{
+                font-size: 30px;
+                margin-bottom: 8px;
+            }}
+
+            .title {{
+                font-size: 28px;
+                font-weight: bold;
+                margin-bottom: 10px;
+            }}
+
+            .subtitle {{
+                font-size: 15px;
+                color: #CBD5E1;
+                margin-bottom: 22px;
+                line-height: 1.4;
+            }}
+
+            .plate-label {{
+                color: #94A3B8;
+                font-size: 14px;
+            }}
+
+            .plate {{
+                font-size: 30px;
+                font-weight: bold;
+                color: #22C55E;
+                margin: 14px 0 26px 0;
+                letter-spacing: 1px;
+            }}
+
+            button, a.button-link {{
+                display: block;
+                width: 100%;
+                box-sizing: border-box;
+                padding: 15px;
+                margin-top: 14px;
+                border: none;
+                border-radius: 12px;
+                font-size: 16px;
+                cursor: pointer;
+                text-decoration: none;
+            }}
+
+            .alert-btn {{
+                background: #EF4444;
+                color: white;
+            }}
+
+            .app-btn {{
+                background: #2563EB;
+                color: white;
+            }}
+
+            .result {{
+                margin-top: 18px;
+                font-size: 15px;
+                color: #E2E8F0;
+                min-height: 22px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="logo">🚗</div>
+            <div class="title">ParkingShield</div>
+            <div class="subtitle">Если автомобиль мешает, вы можете быстро сообщить владельцу</div>
+
+            <div class="plate-label">Номер автомобиля</div>
+            <div class="plate">{number}</div>
+
+            <button class="alert-btn" onclick="sendAlert()">🚨 Сообщить владельцу</button>
+
+            <a class="button-link app-btn" href="https://play.google.com/store/apps/details?id=com.example.parkingshield">
+                📱 Скачать приложение
+            </a>
+
+            <div class="result" id="result"></div>
+        </div>
+
+        <script>
+            function sendAlert() {{
+                const result = document.getElementById("result");
+                result.innerText = "Отправляем сигнал...";
+
+                fetch("/check?number={number}")
+                    .then(response => response.json())
+                    .then(data => {{
+                        if (data.status === "protected") {{
+                            result.innerText = "Сигнал отправлен владельцу 🚨";
+                        }} else {{
+                            result.innerText = "Этот автомобиль сейчас не найден в системе";
+                        }}
+                    }})
+                    .catch(() => {{
+                        result.innerText = "Ошибка связи с сервером";
+                    }});
+            }}
+        </script>
+    </body>
+    </html>
+    """
